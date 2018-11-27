@@ -74,18 +74,18 @@ int main(int ArgC, const char *ArgV[]) {
     }
   }
 
-  if (!Args.hasArg(Option::Baseline, Option::Mix)) {
-    llvm::errs() << "Expected --baseline, --mix, or both\n";
-    ExitCode = EXIT_FAILURE;
-  }
-
   if (Args.hasArg(Option::Help)) {
     Options.PrintHelp(llvm::outs(),
                       llvm::sys::path::filename(ArgV[0]).str().c_str(),
                       "llvm.mix example");
 
     if (!ExitCode)
-      ExitCode = EXIT_SUCCESS;
+      return EXIT_SUCCESS;
+  }
+
+  if (!Args.hasArg(Option::Baseline, Option::Mix)) {
+    llvm::errs() << "Expected --baseline, --mix, or both\n";
+    ExitCode = EXIT_FAILURE;
   }
 
   if (ExitCode)
