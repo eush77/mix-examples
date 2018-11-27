@@ -68,7 +68,10 @@ int main(int ArgC, const char *ArgV[]) {
   llvm::StringRef ScaleArg = Args.getLastArgValue(Option::Scale);
 
   if (!ScaleArg.empty()) {
-    if (ScaleArg.getAsInteger(0, Scale)) {
+    double FScale;
+
+    if (ScaleArg.getAsDouble(FScale) ||
+        static_cast<double>(Scale = FScale) != FScale) {
       llvm::errs() << "Invalid scale argument: " << ScaleArg << '\n';
       ExitCode = EXIT_FAILURE;
     }
