@@ -3,12 +3,16 @@
 #ifndef MIX_EXAMPLES_CLANG_EXAMPLE_H
 #define MIX_EXAMPLES_CLANG_EXAMPLE_H
 
+#include <string>
+
 namespace llvm {
 class Function;
 class LLVMContext;
 }
 
 namespace example {
+
+extern const std::string Overview;
 
 // Baseline
 int runBaseline(int X);

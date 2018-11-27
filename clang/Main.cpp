@@ -80,7 +80,7 @@ int main(int ArgC, const char *ArgV[]) {
   if (Args.hasArg(Option::Help)) {
     Options.PrintHelp(llvm::outs(),
                       llvm::sys::path::filename(ArgV[0]).str().c_str(),
-                      "llvm.mix example");
+                      example::Overview.c_str());
 
     if (!ExitCode)
       return EXIT_SUCCESS;

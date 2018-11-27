@@ -1,10 +1,15 @@
 #include "../Example.h"
 #include "Power.h"
 
+#include <string>
+
 namespace llvm {
 class Function;
 class LLVMContext;
 }
+
+const std::string example::Overview =
+    "power(x, n) - raise X to the power of N (iterative)";
 
 #define N 5
 
