@@ -19,7 +19,25 @@
 
 #include <memory>
 
-int Example::runMix(int X) const {
+namespace {
+
+template <typename Func, typename... Args>
+int runScaled(Func F, unsigned Scale, Args... As) {
+  int Res = 0;
+
+  while (Scale--)
+    Res = F(As...);
+
+  return Res;
+}
+
+} // namespace
+
+int example::runBaseline(unsigned Scale, int X) {
+  return runScaled(static_cast<int (*)(int)>(example::runBaseline), Scale, X);
+}
+
+int example::runMix(unsigned Scale, int X) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
 
@@ -48,5 +66,5 @@ int Example::runMix(int X) const {
       CompileLayer.findSymbol(MangledSymbol.c_str(), false).getAddress());
   int (*Func)(int) = reinterpret_cast<int (*)(int)>(Address);
 
-  return runScaled(Func, X);
+  return runScaled(Func, Scale, X);
 }

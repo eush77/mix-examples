@@ -94,11 +94,9 @@ int main(int ArgC, const char *ArgV[]) {
   if (ExitCode)
     return *ExitCode;
 
-  Example Ex(Scale);
-
   if (Args.hasArg(Option::Baseline))
-    Ex.runBaseline(2);
+    example::runBaseline(Scale, 2);
 
   if (Args.hasArg(Option::Mix))
-    Ex.runMix(2);
+    example::runMix(Scale, 2);
 }
