@@ -2,6 +2,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -112,7 +113,7 @@ llvm::Expected<example::Options> getOptions(const llvm::opt::ArgList &Args) {
   if (const llvm::opt::Arg *ScaleArg = Args.getLastArg(Option::Scale)) {
     double FScale;
 
-    if (llvm::StringRef(ScaleArg->getValue()).getAsDouble(FScale) ||
+    if (!llvm::to_float(ScaleArg->getValue(), FScale) ||
         static_cast<double>(Opts.Scale = FScale) != FScale)
       return llvm::make_error<example::InvalidArgumentValueError>(ScaleArg);
   }
