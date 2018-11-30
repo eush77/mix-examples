@@ -1,43 +1,32 @@
 #include "Example.h"
 
-#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
-#include "llvm/ExecutionEngine/Orc/NullResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include <functional>
 #include <memory>
+#include <utility>
 
-namespace {
+char example::InvalidArgumentError::ID;
+char example::InvalidArgumentValueError::ID;
 
-template <typename Func, typename... Args>
-int runScaled(Func F, unsigned Scale, Args... As) {
-  int Res = 0;
-
-  while (Scale--)
-    Res = F(As...);
-
-  return Res;
-}
-
-} // namespace
-
-int example::runBaseline(unsigned Scale, int X) {
-  return runScaled(static_cast<int (*)(int)>(example::runBaseline), Scale, X);
-}
-
-int example::runMix(unsigned Scale, int X) {
+llvm::Error example::runMix(
+    llvm::function_ref<llvm::Function *(llvm::LLVMContext &)> RunStage0,
+    llvm::function_ref<void(llvm::JITTargetAddress)> RunStage1) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
 
@@ -45,26 +34,31 @@ int example::runMix(unsigned Scale, int X) {
   const llvm::DataLayout DL(TM->createDataLayout());
 
   // Build the ORC stack
+  llvm::orc::ExecutionSession ES;
   llvm::orc::RTDyldObjectLinkingLayer ObjectLayer(
-      []() { return std::make_shared<llvm::SectionMemoryManager>(); });
-  llvm::orc::IRCompileLayer<decltype(ObjectLayer), llvm::orc::SimpleCompiler>
-      CompileLayer(ObjectLayer, llvm::orc::SimpleCompiler(*TM));
+      ES, std::bind(&std::make_unique<llvm::SectionMemoryManager>));
+  llvm::orc::IRCompileLayer CompileLayer(ES, ObjectLayer,
+                                         llvm::orc::SimpleCompiler(*TM));
 
   // Create the stage(1) IR
-  llvm::LLVMContext Ctx;
-  llvm::Function *Stage1 = mixStage1(Ctx);
+  auto Ctx = std::make_unique<llvm::LLVMContext>();
+  llvm::Function *Stage1 = RunStage0(*Ctx);
   Stage1->getParent()->setDataLayout(DL);
+  llvm::orc::ThreadSafeModule TSM(
+      std::unique_ptr<llvm::Module>(Stage1->getParent()), std::move(Ctx));
 
-  llvm::SmallString<16> MangledSymbol;
-  llvm::Mangler::getNameWithPrefix(MangledSymbol, Stage1->getName(), DL);
+  if (llvm::Error Err = CompileLayer.add(ES.getMainJITDylib(), std::move(TSM)))
+    return std::move(Err);
 
-  llvm::cantFail(
-      CompileLayer.addModule(std::unique_ptr<llvm::Module>(Stage1->getParent()),
-                             std::make_unique<llvm::orc::NullResolver>()));
+  llvm::Expected<llvm::JITEvaluatedSymbol> Symbol =
+      ES.getMainJITDylib().withSearchOrderDo(
+          [&](const llvm::orc::JITDylibSearchList &SearchList) {
+            return ES.lookup(SearchList, ES.intern(Stage1->getName()));
+          });
 
-  auto Address = llvm::cantFail(
-      CompileLayer.findSymbol(MangledSymbol.c_str(), false).getAddress());
-  int (*Func)(int) = reinterpret_cast<int (*)(int)>(Address);
+  if (!Symbol)
+    return Symbol.takeError();
 
-  return runScaled(Func, Scale, X);
+  RunStage1(Symbol->getAddress());
+  return llvm::Error::success();
 }

@@ -1,16 +1,21 @@
 #include "Example.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <cstdlib>
+#include <iterator>
+#include <string>
+
+using namespace std::string_literals;
 
 namespace {
 
@@ -46,57 +51,60 @@ public:
 } // namespace
 
 int main(int ArgC, const char *ArgV[]) {
+  llvm::StringRef ToolName = llvm::sys::path::filename(ArgV[0]);
+  llvm::ExitOnError ExitOnError(ToolName.str() + ": ");
+
   OptTable Options;
   unsigned MissingArgIndex, MissingArgCount;
   llvm::opt::InputArgList Args = Options.ParseArgs(
       llvm::makeArrayRef(ArgV + 1, ArgC - 1), MissingArgIndex, MissingArgCount);
-  llvm::Optional<int> ExitCode;
 
-  if (MissingArgCount) {
-    llvm::errs() << "Missing value for \"" << Args.getArgString(MissingArgIndex)
-                 << "\", expected " << MissingArgCount << " argument\n";
-    ExitCode = EXIT_FAILURE;
-  }
+  if (MissingArgCount)
+    ExitOnError(llvm::make_error<llvm::StringError>(
+        "Missing value for \""s + Args.getArgString(MissingArgIndex) + "\"",
+        llvm::inconvertibleErrorCode()));
 
-  for (const llvm::opt::Arg *A :
-       Args.filtered(Option::UNKNOWN, Option::INPUT)) {
-    llvm::errs() << "Unknown argument: \"" << A->getAsString(Args) << "\"\n";
-    ExitCode = EXIT_FAILURE;
+  for (const llvm::opt::Arg *A : Args.filtered(Option::UNKNOWN))
+    ExitOnError(llvm::make_error<example::InvalidArgumentError>(A, Args));
+
+  if (Args.hasArg(Option::Help)) {
+    Options.PrintHelp(llvm::outs(), ToolName.str().c_str(),
+                      example::Overview.c_str());
+    return {};
   }
 
   unsigned Scale = 100'000'000;
-  llvm::StringRef ScaleArg = Args.getLastArgValue(Option::Scale);
 
-  if (!ScaleArg.empty()) {
+  if (const llvm::opt::Arg *ScaleArg = Args.getLastArg(Option::Scale)) {
     double FScale;
 
-    if (ScaleArg.getAsDouble(FScale) ||
-        static_cast<double>(Scale = FScale) != FScale) {
-      llvm::errs() << "Invalid scale argument: " << ScaleArg << '\n';
-      ExitCode = EXIT_FAILURE;
-    }
+    if (llvm::StringRef(ScaleArg->getValue()).getAsDouble(FScale) ||
+        static_cast<double>(Scale = FScale) != FScale)
+      ExitOnError(
+          llvm::make_error<example::InvalidArgumentValueError>(ScaleArg, Args));
   }
 
-  if (Args.hasArg(Option::Help)) {
-    Options.PrintHelp(llvm::outs(),
-                      llvm::sys::path::filename(ArgV[0]).str().c_str(),
-                      example::Overview.c_str());
+  if (!Args.hasArg(Option::Baseline, Option::Mix))
+    ExitOnError(llvm::make_error<llvm::StringError>(
+        "Expected --baseline, --mix, or both", llvm::inconvertibleErrorCode()));
 
-    if (!ExitCode)
-      return EXIT_SUCCESS;
-  }
+  llvm::SmallVector<const llvm::opt::Arg *, 4> InputArgs;
+  llvm::copy(Args.filtered(Option::INPUT), std::back_inserter(InputArgs));
 
-  if (!Args.hasArg(Option::Baseline, Option::Mix)) {
-    llvm::errs() << "Expected --baseline, --mix, or both\n";
-    ExitCode = EXIT_FAILURE;
-  }
+  if (InputArgs.size() != example::NumArgs)
+    ExitOnError(llvm::make_error<llvm::StringError>(
+        "Invalid number of arguments", llvm::inconvertibleErrorCode()));
 
-  if (ExitCode)
-    return *ExitCode;
+  llvm::SmallVector<example::Value, 4> InputArgValues;
+  llvm::transform(InputArgs, std::back_inserter(InputArgValues),
+                  [&](const llvm::opt::Arg *Arg) {
+                    return ExitOnError(
+                        example::parseArg(Arg, InputArgValues.size(), Args));
+                  });
 
   if (Args.hasArg(Option::Baseline))
-    example::runBaseline(Scale, 2);
+    example::runBaseline(Scale, InputArgValues);
 
   if (Args.hasArg(Option::Mix))
-    example::runMix(Scale, 2);
+    ExitOnError(example::runMix(Scale, InputArgValues));
 }
