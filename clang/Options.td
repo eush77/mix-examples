@@ -9,4 +9,6 @@ def Baseline : Flag<["--"], "baseline">,
 def Mix : Flag<["--"], "mix">, HelpText<"Run the mix">, Group<Mode>;
 def Both : Flag<["--"], "both">, HelpText<"Run both (default)">, Group<Mode>;
 
+def Result : Flag<["--"], "result">, HelpText<"Print results">;
 def Scale : Joined<["--"], "scale=">, HelpText<"Number of iterations">;
+def Timing : Flag<["--"], "timing">, HelpText<"Print execution time">;

@@ -10,10 +10,13 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 
+#include <chrono>
 #include <string>
 #include <system_error>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -31,6 +34,16 @@ union Value {
   Value(unsigned V) : AsUnsigned(V) {}
 };
 
+struct Options {
+  unsigned Scale;               // Number of times to run the example
+  bool PrintResult;             // Print result value
+};
+
+using BaselineTiming = std::chrono::steady_clock::duration;
+using MixTiming =
+    llvm::Expected<std::pair<std::chrono::steady_clock::duration,
+                             std::chrono::steady_clock::duration>>;
+
 // Overview string included in --help output
 extern const std::string Overview;
 
@@ -42,24 +55,31 @@ llvm::Expected<Value> parseArg(const llvm::opt::Arg *, unsigned ArgNum,
                                const llvm::opt::ArgList &);
 
 // Run baseline example
-void runBaseline(unsigned Scale, const llvm::SmallVectorImpl<Value> &Args);
+BaselineTiming runBaseline(const Options &Opts,
+                           const llvm::SmallVectorImpl<Value> &Args);
 
 // Run mix example
-llvm::Error runMix(unsigned Scale, const llvm::SmallVectorImpl<Value> &Args);
+MixTiming runMix(const Options &Opts, const llvm::SmallVectorImpl<Value> &Args);
 
 template <typename FuncT>
-auto runScaled(unsigned Scale, FuncT F) -> decltype(F()) {
+std::chrono::steady_clock::duration runScaled(const Options &Opts, FuncT F) {
   decltype(F()) R{};
+  auto Start = std::chrono::steady_clock::now();
 
-  while (Scale--)
+  for (unsigned Scale = Opts.Scale; Scale--;)
     R = F();
 
-  return R;
+  auto End = std::chrono::steady_clock::now();
+
+  if (Opts.PrintResult)
+    llvm::outs() << "Result: " << R << '\n';
+
+  return End - Start;
 }
 
 template <typename FuncT, typename Result = std::result_of_t<FuncT()>>
-void runBaseline(unsigned Scale, FuncT F) {
-  runScaled(Scale, F);
+BaselineTiming runBaseline(const Options &Opts, FuncT F) {
+  return runScaled(Opts, F);
 }
 
 llvm::Error
@@ -67,10 +87,20 @@ runMix(llvm::function_ref<llvm::Function *(llvm::LLVMContext &)> RunStage0,
        llvm::function_ref<void(llvm::JITTargetAddress)> RunStage1);
 
 template <typename RunStage0T, typename RunStage1T>
-llvm::Error runMix(unsigned Scale, RunStage0T RunStage0, RunStage1T RunStage1) {
-  return runMix(RunStage0, [&, Scale](llvm::JITTargetAddress Address) {
-    runScaled(Scale, [&, Address]() { return RunStage1(Address); });
-  });
+MixTiming runMix(const Options &Opts, RunStage0T RunStage0,
+                 RunStage1T RunStage1) {
+  std::chrono::steady_clock::time_point Start0, End0;
+  Start0 = std::chrono::steady_clock::now();
+
+  std::chrono::steady_clock::duration Time1;
+
+  if (auto Err = runMix(RunStage0, [&](llvm::JITTargetAddress Address) {
+        End0 = std::chrono::steady_clock::now();
+        Time1 = runScaled(Opts, [&, Address]() { return RunStage1(Address); });
+      }))
+    return std::move(Err);
+
+  return std::make_pair(End0 - Start0, Time1);
 }
 
 class InvalidArgumentError : public llvm::ErrorInfo<InvalidArgumentError> {

@@ -35,17 +35,18 @@ example::parseArg(const llvm::opt::Arg *Arg, unsigned ArgNum,
   }
 }
 
-void example::runBaseline(unsigned Scale,
-                          const llvm::SmallVectorImpl<Value> &Args) {
-  runBaseline(Scale, [X = Args[0].AsInt, N = Args[1].AsUnsigned]() {
+example::BaselineTiming
+example::runBaseline(const example::Options &Opts,
+                     const llvm::SmallVectorImpl<Value> &Args) {
+  return runBaseline(Opts, [X = Args[0].AsInt, N = Args[1].AsUnsigned]() {
     return power(X, N);
   });
 }
 
-llvm::Error example::runMix(unsigned Scale,
-                            const llvm::SmallVectorImpl<Value> &Args) {
+example::MixTiming example::runMix(const example::Options &Opts,
+                                   const llvm::SmallVectorImpl<Value> &Args) {
   return runMix(
-      Scale,
+      Opts,
       [N = Args[1].AsUnsigned](llvm::LLVMContext &Ctx) {
         return static_cast<llvm::Function *>(mixPower(&Ctx, N));
       },

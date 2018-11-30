@@ -9,12 +9,15 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <chrono>
 #include <iterator>
 #include <numeric>
 #include <string>
+#include <tuple>
 
 using namespace std::string_literals;
 
@@ -65,6 +68,7 @@ void printHelp(llvm::StringRef ToolName, const OptTable &Options) {
 enum Mode {
   M_Baseline = 1,
   M_Mix = 2,
+  M_Both = 3,
 };
 
 // Get mode
@@ -82,7 +86,7 @@ Mode getMode(const llvm::opt::ArgList &Args) {
       break;
 
     case Option::Both:
-      M |= M_Baseline | M_Mix;
+      M |= M_Both;
       break;
 
     default:
@@ -91,25 +95,28 @@ Mode getMode(const llvm::opt::ArgList &Args) {
   }
 
   if (!M)
-    M = M_Baseline | M_Mix;
+    M = M_Both;
 
   return static_cast<Mode>(M);
 }
 
-// Get --scale
-llvm::Expected<unsigned> getScale(const llvm::opt::ArgList &Args) {
-  unsigned Scale = 100'000'000; // Default value
+// Get example options
+llvm::Expected<example::Options> getOptions(const llvm::opt::ArgList &Args) {
+  example::Options Opts;
+
+  Opts.Scale = 100'000'000;     // Default
+  Opts.PrintResult = Args.hasArg(Option::Result);
 
   if (const llvm::opt::Arg *ScaleArg = Args.getLastArg(Option::Scale)) {
     double FScale;
 
     if (llvm::StringRef(ScaleArg->getValue()).getAsDouble(FScale) ||
-        static_cast<double>(Scale = FScale) != FScale)
+        static_cast<double>(Opts.Scale = FScale) != FScale)
       return llvm::make_error<example::InvalidArgumentValueError>(ScaleArg,
                                                                   Args);
   }
 
-  return Scale;
+  return Opts;
 }
 
 // Get input arguments for the example
@@ -157,14 +164,49 @@ int main(int ArgC, const char *ArgV[]) {
   }
 
   Mode M = getMode(Args);
-  unsigned Scale = ExitOnError(getScale(Args));
+  example::Options Opts = ExitOnError(getOptions(Args));
+  bool Timing = Args.hasArg(Option::Timing);
 
   llvm::SmallVector<example::Value, 4> InputArgValues;
   ExitOnError(getInputArgValues(Args, std::back_inserter(InputArgValues)));
 
-  if (M & M_Baseline)
-    example::runBaseline(Scale, InputArgValues);
+  std::chrono::steady_clock::duration Baseline, Stage0, Stage1;
 
-  if (M & M_Mix)
-    ExitOnError(example::runMix(Scale, InputArgValues));
+  if (M & M_Baseline) {
+    llvm::outs() << "Running baseline\n";
+    Baseline = example::runBaseline(Opts, InputArgValues);
+
+    if (Timing)
+      llvm::outs() << "Time: "
+                   << std::chrono::duration_cast<std::chrono::milliseconds>(
+                          Baseline)
+                          .count()
+                   << " ms\n";
+  }
+
+  if (M == M_Both && (Opts.PrintResult || Timing))
+    llvm::outs() << '\n';
+
+  if (M & M_Mix) {
+    llvm::outs() << "Running mix\n";
+    std::tie(Stage0, Stage1) =
+        ExitOnError(example::runMix(Opts, InputArgValues));
+
+    if (Timing)
+      llvm::outs()
+          << "Stage(0) time: "
+          << std::chrono::duration_cast<std::chrono::milliseconds>(Stage0)
+                 .count()
+          << " ms\n"
+          << "Stage(1) time: "
+          << std::chrono::duration_cast<std::chrono::milliseconds>(Stage1)
+                 .count()
+          << " ms\n";
+  }
+
+  if (M == M_Both && Timing) {
+    std::chrono::duration<double> B = Baseline;
+    std::chrono::duration<double> S = Stage1;
+    llvm::outs() << "\nSpeedup: " << llvm::format("%.3g", B / S) << '\n';
+  }
 }
