@@ -15,8 +15,7 @@ class Function;
 class LLVMContext;
 }
 
-const std::string example::Overview =
-    "power(x, n) - raise X to the power of N (iterative)";
+const std::string example::Overview = "power(x, n) - raise X to the power of N";
 
 const std::vector<std::string> example::ArgNames{"x", "n"};
 
