@@ -1,7 +1,6 @@
 #include "Example.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
@@ -9,6 +8,7 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -49,6 +49,89 @@ public:
   OptTable() : llvm::opt::OptTable(OptTableInfo) {}
 };
 
+// Print --help
+void printHelp(llvm::StringRef ToolName, const OptTable &Options) {
+  std::string Usage =
+      std::accumulate(example::ArgNames.begin(), example::ArgNames.end(),
+                      ToolName.str() + " [options]",
+                      [](const std::string &Left, const std::string &Right) {
+                        return Left + " <" + Right + ">";
+                      });
+
+  Options.PrintHelp(llvm::outs(), Usage.c_str(), example::Overview.c_str());
+}
+
+// Mode of operation
+enum Mode {
+  M_Baseline = 1,
+  M_Mix = 2,
+};
+
+// Get mode
+Mode getMode(const llvm::opt::ArgList &Args) {
+  unsigned M = 0;
+
+  for (const llvm::opt::Arg *Arg : Args.filtered(Option::Mode)) {
+    switch (Arg->getOption().getID()) {
+    case Option::Baseline:
+      M |= M_Baseline;
+      break;
+
+    case Option::Mix:
+      M |= M_Mix;
+      break;
+
+    case Option::Both:
+      M |= M_Baseline | M_Mix;
+      break;
+
+    default:
+      llvm_unreachable("Unhandled option");
+    }
+  }
+
+  if (!M)
+    M = M_Baseline | M_Mix;
+
+  return static_cast<Mode>(M);
+}
+
+// Get --scale
+llvm::Expected<unsigned> getScale(const llvm::opt::ArgList &Args) {
+  unsigned Scale = 100'000'000; // Default value
+
+  if (const llvm::opt::Arg *ScaleArg = Args.getLastArg(Option::Scale)) {
+    double FScale;
+
+    if (llvm::StringRef(ScaleArg->getValue()).getAsDouble(FScale) ||
+        static_cast<double>(Scale = FScale) != FScale)
+      return llvm::make_error<example::InvalidArgumentValueError>(ScaleArg,
+                                                                  Args);
+  }
+
+  return Scale;
+}
+
+// Get input arguments for the example
+template <typename OutputIt>
+llvm::Error getInputArgValues(const llvm::opt::ArgList &Args, OutputIt Out) {
+  unsigned ArgNum = 0;
+
+  for (const llvm::opt::Arg *Arg : Args.filtered(Option::INPUT)) {
+    if (llvm::Expected<example::Value> V =
+            example::parseArg(Arg, ArgNum++, Args))
+      *Out++ = *V;
+    else
+      return V.takeError();
+  }
+
+  if (ArgNum != example::ArgNames.size())
+    return llvm::make_error<llvm::StringError>("Invalid number of arguments",
+                                               llvm::inconvertibleErrorCode());
+
+  return llvm::Error::success();
+}
+
 } // namespace
 
 int main(int ArgC, const char *ArgV[]) {
@@ -69,49 +152,19 @@ int main(int ArgC, const char *ArgV[]) {
     ExitOnError(llvm::make_error<example::InvalidArgumentError>(A, Args));
 
   if (Args.hasArg(Option::Help)) {
-    std::string Usage =
-        std::accumulate(example::ArgNames.begin(), example::ArgNames.end(),
-                        ToolName.str() + " [options]",
-                        [](const std::string &Left, const std::string &Right) {
-                          return Left + " <" + Right + ">";
-                        });
-
-    Options.PrintHelp(llvm::outs(), Usage.c_str(), example::Overview.c_str());
+    printHelp(ToolName, Options);
     return {};
   }
 
-  unsigned Scale = 100'000'000;
-
-  if (const llvm::opt::Arg *ScaleArg = Args.getLastArg(Option::Scale)) {
-    double FScale;
-
-    if (llvm::StringRef(ScaleArg->getValue()).getAsDouble(FScale) ||
-        static_cast<double>(Scale = FScale) != FScale)
-      ExitOnError(
-          llvm::make_error<example::InvalidArgumentValueError>(ScaleArg, Args));
-  }
-
-  if (!Args.hasArg(Option::Baseline, Option::Mix))
-    ExitOnError(llvm::make_error<llvm::StringError>(
-        "Expected --baseline, --mix, or both", llvm::inconvertibleErrorCode()));
-
-  llvm::SmallVector<const llvm::opt::Arg *, 4> InputArgs;
-  llvm::copy(Args.filtered(Option::INPUT), std::back_inserter(InputArgs));
-
-  if (InputArgs.size() != example::ArgNames.size())
-    ExitOnError(llvm::make_error<llvm::StringError>(
-        "Invalid number of arguments", llvm::inconvertibleErrorCode()));
+  Mode M = getMode(Args);
+  unsigned Scale = ExitOnError(getScale(Args));
 
   llvm::SmallVector<example::Value, 4> InputArgValues;
-  llvm::transform(InputArgs, std::back_inserter(InputArgValues),
-                  [&](const llvm::opt::Arg *Arg) {
-                    return ExitOnError(
-                        example::parseArg(Arg, InputArgValues.size(), Args));
-                  });
+  ExitOnError(getInputArgValues(Args, std::back_inserter(InputArgValues)));
 
-  if (Args.hasArg(Option::Baseline))
+  if (M & M_Baseline)
     example::runBaseline(Scale, InputArgValues);
 
-  if (Args.hasArg(Option::Mix))
+  if (M & M_Mix)
     ExitOnError(example::runMix(Scale, InputArgValues));
 }
