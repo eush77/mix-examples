@@ -1,6 +1,7 @@
 set(CMAKE_C_COMPILER ${CLANG})
 set(CMAKE_C_FLAGS "-std=c11 -fPIC -O1 -Wall -Wextra")
-set(CMAKE_CXX_FLAGS "-std=c++14 -fno-rtti -fPIC -g -O2 -Wall -Wextra")
+set(CMAKE_CXX_FLAGS
+  "-std=c++14 -fno-rtti -fPIC -g -O2 -Wall -Wextra -Wno-unused-parameter")
 
 set(LLVM_TARGET_DEFINITIONS Options.td)
 tablegen(${CMAKE_PROJECT_NAME} Options.inc -gen-opt-parser-defs
