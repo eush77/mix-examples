@@ -21,6 +21,7 @@
 #include <memory>
 #include <utility>
 
+char example::IncompatibleArgumentsError::ID;
 char example::InvalidArgumentError::ID;
 char example::InvalidArgumentValueError::ID;
 

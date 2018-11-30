@@ -3,10 +3,13 @@
 #ifndef MIX_EXAMPLES_CLANG_EXAMPLE_H
 #define MIX_EXAMPLES_CLANG_EXAMPLE_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
@@ -20,7 +23,6 @@
 #include <vector>
 
 namespace llvm {
-class Function;
 class LLVMContext;
 }
 
@@ -35,8 +37,10 @@ union Value {
 };
 
 struct Options {
-  unsigned Scale;               // Number of times to run the example
-  bool PrintResult;             // Print result value
+  unsigned Scale;                     // Number of times to run the example
+  bool PrintResult;                   // Print result value
+  llvm::StringRef DumpStage1FileName; // File to dump stage(1) IR to
+  llvm::StringRef DumpStage1Banner;   // Banner to include before the dump
 };
 
 using BaselineTiming = std::chrono::steady_clock::duration;
@@ -89,19 +93,63 @@ runMix(llvm::function_ref<llvm::Function *(llvm::LLVMContext &)> RunStage0,
 template <typename RunStage0T, typename RunStage1T>
 MixTiming runMix(const Options &Opts, RunStage0T RunStage0,
                  RunStage1T RunStage1) {
+  llvm::Optional<llvm::raw_fd_ostream> DumpOS;
+
+  if (!Opts.DumpStage1FileName.empty()) {
+    std::error_code EC;
+    DumpOS.emplace(Opts.DumpStage1FileName, EC);
+
+    if (EC)
+      return llvm::errorCodeToError(EC);
+  }
+
   std::chrono::steady_clock::time_point Start0, End0;
   Start0 = std::chrono::steady_clock::now();
 
   std::chrono::steady_clock::duration Time1;
 
-  if (auto Err = runMix(RunStage0, [&](llvm::JITTargetAddress Address) {
-        End0 = std::chrono::steady_clock::now();
-        Time1 = runScaled(Opts, [&, Address]() { return RunStage1(Address); });
-      }))
+  if (auto Err = runMix(
+          [&](llvm::LLVMContext &Ctx) {
+            llvm::Function *F = RunStage0(Ctx);
+
+            if (DumpOS)
+              *DumpOS << Opts.DumpStage1Banner << *F->getParent();
+
+            return F;
+          },
+          [&](llvm::JITTargetAddress Address) {
+            End0 = std::chrono::steady_clock::now();
+            Time1 =
+                runScaled(Opts, [&, Address]() { return RunStage1(Address); });
+          }))
     return std::move(Err);
 
   return std::make_pair(End0 - Start0, Time1);
 }
+
+class IncompatibleArgumentsError
+    : public llvm::ErrorInfo<IncompatibleArgumentsError> {
+public:
+  static char ID;
+
+  IncompatibleArgumentsError(const llvm::opt::Arg *Left,
+                             const llvm::opt::Arg *Right,
+                             const llvm::opt::ArgList &ArgList)
+      : Left(Left), Right(Right), ArgList(ArgList) {}
+
+  void log(llvm::raw_ostream &OS) const override {
+    OS << "Incompatible arguments: " << Left->getAsString(ArgList) << " and "
+       << Right->getAsString(ArgList);
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+
+private:
+  const llvm::opt::Arg *Left, *Right;
+  const llvm::opt::ArgList &ArgList;
+};
 
 class InvalidArgumentError : public llvm::ErrorInfo<InvalidArgumentError> {
 public:

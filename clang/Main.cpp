@@ -18,6 +18,7 @@
 #include <numeric>
 #include <string>
 #include <tuple>
+#include <utility>
 
 using namespace std::string_literals;
 
@@ -106,6 +107,7 @@ llvm::Expected<example::Options> getOptions(const llvm::opt::ArgList &Args) {
 
   Opts.Scale = 100'000'000;     // Default
   Opts.PrintResult = Args.hasArg(Option::Result);
+  Opts.DumpStage1FileName = Args.getLastArgValue(Option::DumpToFile);
 
   if (const llvm::opt::Arg *ScaleArg = Args.getLastArg(Option::Scale)) {
     double FScale;
@@ -116,7 +118,17 @@ llvm::Expected<example::Options> getOptions(const llvm::opt::ArgList &Args) {
                                                                   Args);
   }
 
-  return Opts;
+  if (Args.hasArg(Option::Dump) && Args.hasArg(Option::DumpToFile))
+    return llvm::make_error<example::IncompatibleArgumentsError>(
+        Args.getLastArg(Option::Dump), Args.getLastArg(Option::DumpToFile),
+        Args);
+
+  if (Args.hasArg(Option::Dump)) {
+    Opts.DumpStage1FileName = "-";
+    Opts.DumpStage1Banner = "Stage 1:\n";
+  }
+
+  return std::move(Opts);
 }
 
 // Get input arguments for the example
