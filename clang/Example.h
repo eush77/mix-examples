@@ -177,12 +177,10 @@ class InvalidArgumentValueError
 public:
   static char ID;
 
-  InvalidArgumentValueError(const llvm::opt::Arg *Arg,
-                            const llvm::opt::ArgList &ArgList)
-      : Arg(Arg), ArgList(ArgList) {}
+  explicit InvalidArgumentValueError(const llvm::opt::Arg *Arg) : Arg(Arg) {}
 
   void log(llvm::raw_ostream &OS) const override {
-    OS << "Invalid value for " << Arg->getAsString(ArgList) << ": "
+    OS << "Invalid value for " << Arg->getOption().getRenderName() << " "
        << Arg->getValue();
   }
 
@@ -192,7 +190,6 @@ public:
 
 private:
   const llvm::opt::Arg *Arg;
-  const llvm::opt::ArgList &ArgList;
 };
 
 template <typename ValueT>

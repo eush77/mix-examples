@@ -114,8 +114,7 @@ llvm::Expected<example::Options> getOptions(const llvm::opt::ArgList &Args) {
 
     if (llvm::StringRef(ScaleArg->getValue()).getAsDouble(FScale) ||
         static_cast<double>(Opts.Scale = FScale) != FScale)
-      return llvm::make_error<example::InvalidArgumentValueError>(ScaleArg,
-                                                                  Args);
+      return llvm::make_error<example::InvalidArgumentValueError>(ScaleArg);
   }
 
   if (Args.hasArg(Option::Dump) && Args.hasArg(Option::DumpToFile))
