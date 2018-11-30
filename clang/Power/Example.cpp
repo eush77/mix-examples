@@ -8,6 +8,7 @@
 #include "llvm/Support/Error.h"
 
 #include <string>
+#include <vector>
 
 namespace llvm {
 class Function;
@@ -17,7 +18,7 @@ class LLVMContext;
 const std::string example::Overview =
     "power(x, n) - raise X to the power of N (iterative)";
 
-const unsigned example::NumArgs = 2;
+const std::vector<std::string> example::ArgNames{"x", "n"};
 
 llvm::Expected<example::Value>
 example::parseArg(const llvm::opt::Arg *Arg, unsigned ArgNum,

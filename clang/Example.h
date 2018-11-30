@@ -14,6 +14,7 @@
 #include <string>
 #include <system_error>
 #include <type_traits>
+#include <vector>
 
 namespace llvm {
 class Function;
@@ -33,8 +34,8 @@ union Value {
 // Overview string included in --help output
 extern const std::string Overview;
 
-// Number of arguments
-extern const unsigned NumArgs;
+// Names of arguments
+extern const std::vector<std::string> ArgNames;
 
 // Parse command-line argument
 llvm::Expected<Value> parseArg(const llvm::opt::Arg *, unsigned ArgNum,

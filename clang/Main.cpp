@@ -13,6 +13,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <iterator>
+#include <numeric>
 #include <string>
 
 using namespace std::string_literals;
@@ -68,8 +69,14 @@ int main(int ArgC, const char *ArgV[]) {
     ExitOnError(llvm::make_error<example::InvalidArgumentError>(A, Args));
 
   if (Args.hasArg(Option::Help)) {
-    Options.PrintHelp(llvm::outs(), ToolName.str().c_str(),
-                      example::Overview.c_str());
+    std::string Usage =
+        std::accumulate(example::ArgNames.begin(), example::ArgNames.end(),
+                        ToolName.str() + " [options]",
+                        [](const std::string &Left, const std::string &Right) {
+                          return Left + " <" + Right + ">";
+                        });
+
+    Options.PrintHelp(llvm::outs(), Usage.c_str(), example::Overview.c_str());
     return {};
   }
 
@@ -91,7 +98,7 @@ int main(int ArgC, const char *ArgV[]) {
   llvm::SmallVector<const llvm::opt::Arg *, 4> InputArgs;
   llvm::copy(Args.filtered(Option::INPUT), std::back_inserter(InputArgs));
 
-  if (InputArgs.size() != example::NumArgs)
+  if (InputArgs.size() != example::ArgNames.size())
     ExitOnError(llvm::make_error<llvm::StringError>(
         "Invalid number of arguments", llvm::inconvertibleErrorCode()));
 
