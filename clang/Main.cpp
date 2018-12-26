@@ -106,9 +106,16 @@ Mode getMode(const llvm::opt::ArgList &Args) {
 llvm::Expected<example::Options> getOptions(const llvm::opt::ArgList &Args) {
   example::Options Opts;
 
+  Opts.OptLevel = 2;            // Default
   Opts.Scale = 100'000'000;     // Default
   Opts.PrintResult = Args.hasArg(Option::Result);
   Opts.DumpStage1FileName = Args.getLastArgValue(Option::DumpToFile);
+
+  if (const llvm::opt::Arg *OptLevelArg = Args.getLastArg(Option::OptLevel)) {
+    if (!llvm::to_integer(OptLevelArg->getValue(), Opts.OptLevel) ||
+        Opts.OptLevel > 3)
+      return llvm::make_error<example::InvalidArgumentValueError>(OptLevelArg);
+  }
 
   if (const llvm::opt::Arg *ScaleArg = Args.getLastArg(Option::Scale)) {
     double FScale;

@@ -11,19 +11,45 @@
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <utility>
 
+using namespace std::placeholders;
+
 char example::IncompatibleArgumentsError::ID;
 char example::InvalidArgumentError::ID;
 char example::InvalidArgumentValueError::ID;
+
+void example::optimizeModule(llvm::Module &M, unsigned OptLevel) {
+  llvm::PassManagerBuilder PMB;
+  PMB.OptLevel = OptLevel;
+
+  {
+    llvm::legacy::FunctionPassManager FPM(&M);
+    PMB.populateFunctionPassManager(FPM);
+
+    FPM.doInitialization();
+    std::for_each(M.begin(), M.end(),
+                  std::bind(&llvm::legacy::FunctionPassManager::run, &FPM, _1));
+    FPM.doFinalization();
+  }
+
+  {
+    llvm::legacy::PassManager MPM;
+    PMB.populateModulePassManager(MPM);
+    MPM.run(M);
+  }
+}
 
 llvm::Error example::runMix(
     llvm::function_ref<llvm::Function *(llvm::LLVMContext &)> RunStage0,

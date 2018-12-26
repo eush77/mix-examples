@@ -13,6 +13,7 @@ def Dump : Flag<["--"], "dump">, HelpText<"Dump stage(1) IR to stdout">;
 def DumpToFile : Joined<["--"], "dump=">,
                  HelpText<"Dump stage(1) IR to file">,
                  MetaVarName<"<file>">;
+def OptLevel : Joined<["-"], "O">, HelpText<"Optimization level (0..3)">;
 def Result : Flag<["--"], "result">, HelpText<"Print results">;
 def Scale : Joined<["--"], "scale=">, HelpText<"Number of iterations">;
 def Timing : Flag<["--"], "timing">, HelpText<"Print execution time">;

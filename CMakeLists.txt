@@ -8,7 +8,7 @@ add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 llvm_map_components_to_libnames(LLVM_LIBS
-  core executionengine native object option orcjit support)
+  core executionengine ipo native object option orcjit support)
 link_libraries(${LLVM_LIBS})
 
 if(NOT ${CMAKE_PROJECT_NAME}_TABLEGEN_EXE)

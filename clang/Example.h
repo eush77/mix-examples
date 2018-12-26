@@ -37,6 +37,7 @@ union Value {
 };
 
 struct Options {
+  unsigned OptLevel;                  // Optimization level
   unsigned Scale;                     // Number of times to run the example
   bool PrintResult;                   // Print result value
   llvm::StringRef DumpStage1FileName; // File to dump stage(1) IR to
@@ -86,6 +87,8 @@ BaselineTiming runBaseline(const Options &Opts, FuncT F) {
   return runScaled(Opts, F);
 }
 
+void optimizeModule(llvm::Module &M, unsigned OptLevel);
+
 llvm::Error
 runMix(llvm::function_ref<llvm::Function *(llvm::LLVMContext &)> RunStage0,
        llvm::function_ref<void(llvm::JITTargetAddress)> RunStage1);
@@ -111,6 +114,8 @@ MixTiming runMix(const Options &Opts, RunStage0T RunStage0,
   if (auto Err = runMix(
           [&](llvm::LLVMContext &Ctx) {
             llvm::Function *F = RunStage0(Ctx);
+
+            optimizeModule(*F->getParent(), Opts.OptLevel);
 
             if (DumpOS)
               *DumpOS << Opts.DumpStage1Banner << *F->getParent();
@@ -180,8 +185,15 @@ public:
   explicit InvalidArgumentValueError(const llvm::opt::Arg *Arg) : Arg(Arg) {}
 
   void log(llvm::raw_ostream &OS) const override {
-    OS << "Invalid value for " << Arg->getOption().getRenderName() << " "
-       << Arg->getValue();
+    llvm::StringRef Name = Arg->getOption().getName();
+
+    OS << "Invalid value for ";
+
+    if (!Name.consume_back("="))
+      OS << Arg->getOption().getPrefix();
+
+    OS << Name << ": " << Arg->getValue()
+       << (*Arg->getValue() ? "" : "(empty)");
   }
 
   std::error_code convertToErrorCode() const override {
