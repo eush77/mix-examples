@@ -20,7 +20,6 @@
 #include <system_error>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 namespace llvm {
 class LLVMContext;
@@ -52,12 +51,12 @@ using MixTiming =
 // Overview string included in --help output
 extern const std::string Overview;
 
-// Names of arguments
-extern const std::vector<std::string> ArgNames;
-
 // Parse command-line argument
 llvm::Expected<Value> parseArg(const llvm::opt::Arg *, unsigned ArgNum,
                                const llvm::opt::ArgList &);
+
+// Check parsed arguments
+llvm::Error checkArgs(const llvm::SmallVectorImpl<Value> &Args);
 
 // Run baseline example
 BaselineTiming runBaseline(const Options &Opts,
@@ -178,6 +177,27 @@ public:
 private:
   const llvm::opt::Arg *Arg;
   const llvm::opt::ArgList &ArgList;
+};
+
+class InvalidArgumentCountError
+    : public llvm::ErrorInfo<InvalidArgumentCountError> {
+public:
+  static char ID;
+
+  InvalidArgumentCountError(unsigned Count, unsigned ExpectedCount)
+      : Count(Count), ExpectedCount(ExpectedCount) {}
+
+  void log(llvm::raw_ostream &OS) const override {
+    OS << "Invalid number of arguments: expected " << ExpectedCount << ", got "
+       << Count;
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+
+private:
+  unsigned Count, ExpectedCount;
 };
 
 class InvalidArgumentValueError

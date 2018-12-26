@@ -15,8 +15,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <chrono>
-#include <iterator>
-#include <numeric>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -53,18 +51,6 @@ class OptTable : public llvm::opt::OptTable {
 public:
   OptTable() : llvm::opt::OptTable(OptTableInfo) {}
 };
-
-// Print --help
-void printHelp(llvm::StringRef ToolName, const OptTable &Options) {
-  std::string Usage =
-      std::accumulate(example::ArgNames.begin(), example::ArgNames.end(),
-                      ToolName.str() + " [options]",
-                      [](const std::string &Left, const std::string &Right) {
-                        return Left + " <" + Right + ">";
-                      });
-
-  Options.PrintHelp(llvm::outs(), Usage.c_str(), example::Overview.c_str());
-}
 
 // Mode of operation
 enum Mode {
@@ -139,23 +125,22 @@ llvm::Expected<example::Options> getOptions(const llvm::opt::ArgList &Args) {
 }
 
 // Get input arguments for the example
-template <typename OutputIt>
-llvm::Error getInputArgValues(const llvm::opt::ArgList &Args, OutputIt Out) {
+llvm::Error
+getInputArgValues(const llvm::opt::ArgList &Args,
+                  llvm::SmallVectorImpl<example::Value> &ArgValues) {
   unsigned ArgNum = 0;
+
+  ArgValues.clear();
 
   for (const llvm::opt::Arg *Arg : Args.filtered(Option::INPUT)) {
     if (llvm::Expected<example::Value> V =
             example::parseArg(Arg, ArgNum++, Args))
-      *Out++ = *V;
+      ArgValues.push_back(*V);
     else
       return V.takeError();
   }
 
-  if (ArgNum != example::ArgNames.size())
-    return llvm::make_error<llvm::StringError>("Invalid number of arguments",
-                                               llvm::inconvertibleErrorCode());
-
-  return llvm::Error::success();
+  return std::move(example::checkArgs(ArgValues));
 }
 
 } // namespace
@@ -178,7 +163,9 @@ int main(int ArgC, const char *ArgV[]) {
     ExitOnError(llvm::make_error<example::InvalidArgumentError>(A, Args));
 
   if (Args.hasArg(Option::Help)) {
-    printHelp(ToolName, Options);
+    Options.PrintHelp(llvm::outs(),
+                    (ToolName + " [option]... <arg>...").str().c_str(),
+                    example::Overview.c_str());
     return {};
   }
 
@@ -187,7 +174,7 @@ int main(int ArgC, const char *ArgV[]) {
   bool Timing = Args.hasArg(Option::Timing);
 
   llvm::SmallVector<example::Value, 4> InputArgValues;
-  ExitOnError(getInputArgValues(Args, std::back_inserter(InputArgValues)));
+  ExitOnError(getInputArgValues(Args, InputArgValues));
 
   std::chrono::steady_clock::duration Baseline, Stage0, Stage1;
 

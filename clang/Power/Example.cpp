@@ -8,7 +8,6 @@
 #include "llvm/Support/Error.h"
 
 #include <string>
-#include <vector>
 
 namespace llvm {
 class Function;
@@ -16,8 +15,6 @@ class LLVMContext;
 }
 
 const std::string example::Overview = "power(x, n) - raise X to the power of N";
-
-const std::vector<std::string> example::ArgNames{"x", "n"};
 
 llvm::Expected<example::Value>
 example::parseArg(const llvm::opt::Arg *Arg, unsigned ArgNum,
@@ -32,6 +29,12 @@ example::parseArg(const llvm::opt::Arg *Arg, unsigned ArgNum,
   default:
     return llvm::make_error<InvalidArgumentError>(Arg, ArgList);
   }
+}
+
+llvm::Error example::checkArgs(const llvm::SmallVectorImpl<Value> &Args) {
+  return Args.size() != 2
+             ? llvm::make_error<InvalidArgumentCountError>(Args.size(), 2)
+             : llvm::Error::success();
 }
 
 example::BaselineTiming

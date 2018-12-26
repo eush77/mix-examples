@@ -28,6 +28,7 @@ using namespace std::placeholders;
 
 char example::IncompatibleArgumentsError::ID;
 char example::InvalidArgumentError::ID;
+char example::InvalidArgumentCountError::ID;
 char example::InvalidArgumentValueError::ID;
 
 void example::optimizeModule(llvm::Module &M, unsigned OptLevel) {
