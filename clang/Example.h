@@ -74,6 +74,9 @@ std::chrono::steady_clock::duration runScaled(const Options &Opts, FuncT F) {
   for (unsigned Scale = Opts.Scale; Scale--;)
     R = F();
 
+  // Prevent optimization
+  asm volatile("" : "+m"(R));
+
   auto End = std::chrono::steady_clock::now();
 
   if (Opts.PrintResult)
