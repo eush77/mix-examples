@@ -1,6 +1,6 @@
-#include "Power.h"
+#include "PowerIter.h"
 
-__stage(1) int power(int __stage(1) X, unsigned N) __stage(1) {
+__stage(1) int powerIter(int __stage(1) X, unsigned N) __stage(1) {
   int Res = 1;
 
   while (N--)
@@ -9,4 +9,4 @@ __stage(1) int power(int __stage(1) X, unsigned N) __stage(1) {
   return Res;
 }
 
-__attribute__((mix_ir(power))) void *mixPower(void *Ctx, unsigned N);
+__attribute__((mix_ir(powerIter))) void *mixPowerIter(void *Ctx, unsigned N);

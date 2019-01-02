@@ -1,7 +1,3 @@
 ---
 BasedOnStyle: LLVM
 ...
----
-Language: TableGen
-SpacesInContainerLiterals: false
-...

@@ -8,13 +8,11 @@ add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 llvm_map_components_to_libnames(LLVM_LIBS
-  core executionengine ipo native object option orcjit support)
+  core executionengine ipo native object orcjit support)
 link_libraries(${LLVM_LIBS})
 
-if(NOT ${CMAKE_PROJECT_NAME}_TABLEGEN_EXE)
-  find_program(${CMAKE_PROJECT_NAME}_TABLEGEN_EXE llvm-tblgen)
-endif()
-include(TableGen)
+add_subdirectory(deps)
+link_libraries(benchmark_main)
 
 find_program(CLANG clang PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
 if(EXISTS ${CLANG})
