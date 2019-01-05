@@ -27,7 +27,8 @@ See `--help` and the [documentation] for Google Benchmark for more options.
 
 Additional options are controlled by the following environment variables:
 
-| Variable        | Values | Default | Description                    |
-|-----------------|--------|---------|--------------------------------|
-| `MIX_DUMP`      | 0 or 1 | 0       | Dump stage(1) LLVM IR to files |
-| `MIX_OPT_LEVEL` | 0..3   | 2       | JIT optimization level         |
+| Variable         | Values | Default | Description                    |
+|------------------|--------|---------|--------------------------------|
+| `MIX_DUMP`       | 0 or 1 | 0       | Dump stage(1) LLVM IR to files |
+| `MIX_OPT_LEVEL`  | 0..3   | 2       | JIT optimization level         |
+| `MIX_SIZE_LEVEL` | 0..2   | 0       | Size optimization level        |

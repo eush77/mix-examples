@@ -7,6 +7,7 @@
 
 bool Dumping = false;
 unsigned OptLevel = 2;
+unsigned SizeLevel = 0;
 
 namespace {
 
@@ -35,6 +36,10 @@ __attribute__((constructor)) void parseDumping() {
 
 __attribute__((constructor)) void parseOptLevel() {
   parse("MIX_OPT_LEVEL", OptLevel, 3);
+}
+
+__attribute__((constructor)) void parseSizeLevel() {
+  parse("MIX_SIZE_LEVEL", SizeLevel, 2);
 }
 
 } // namespace

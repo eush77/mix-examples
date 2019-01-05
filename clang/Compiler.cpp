@@ -64,6 +64,7 @@ namespace {
 void optimizeModule(llvm::Module &M) {
   llvm::PassManagerBuilder PMB;
   PMB.OptLevel = ::OptLevel;
+  PMB.SizeLevel = ::SizeLevel;
 
   {
     llvm::legacy::FunctionPassManager FPM(&M);
