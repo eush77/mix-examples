@@ -11,12 +11,13 @@
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 #include <algorithm>
@@ -65,6 +66,8 @@ void optimizeModule(llvm::Module &M) {
   llvm::PassManagerBuilder PMB;
   PMB.OptLevel = ::OptLevel;
   PMB.SizeLevel = ::SizeLevel;
+  PMB.Inliner =
+      llvm::createFunctionInliningPass(::OptLevel, ::SizeLevel, false);
 
   {
     llvm::legacy::FunctionPassManager FPM(&M);
