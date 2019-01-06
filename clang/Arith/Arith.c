@@ -27,4 +27,4 @@ __stage(1) int eval(struct Node *Expr, __stage(1) int *Args) __stage(1) {
   }
 }
 
-__attribute__((mix_ir(eval))) void *mixEval(void *, struct Node *);
+__attribute__((mix(eval))) void *mixEval(void *, struct Node *);

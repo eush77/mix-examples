@@ -9,4 +9,4 @@ __stage(1) int powerIter(int __stage(1) X, unsigned N) __stage(1) {
   return Res;
 }
 
-__attribute__((mix_ir(powerIter))) void *mixPowerIter(void *Ctx, unsigned N);
+__attribute__((mix(powerIter))) void *mixPowerIter(void *Ctx, unsigned N);
