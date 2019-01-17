@@ -1,44 +1,40 @@
 #include "Bytecode.h"
 
-__stage(1) int eval(struct Instruction *Program,
-                    __stage(1) int *Args) __stage(1) {
-  int Regs[5];
+static int Regs[5];
 
-  for (struct Instruction *PC = Program;; ++PC) {
-    switch (PC->Op) {
-    case O_Int:
-      Regs[PC->Operands[0]] = PC->Operands[1];
-      break;
+__stage(1) int eval(struct Instruction *PC, __stage(1) int *Args) __stage(1) {
+  switch (PC->Op) {
+  case O_Int:
+    Regs[PC->Operands[0]] = PC->Operands[1];
+    return eval(PC + 1, Args);
 
-    case O_Par:
-      Regs[PC->Operands[0]] = Args[PC->Operands[1]];
-      break;
+  case O_Par:
+    Regs[PC->Operands[0]] = Args[PC->Operands[1]];
+    return eval(PC + 1, Args);
 
-    case O_Mov:
-      Regs[PC->Operands[0]] = Regs[PC->Operands[1]];
-      break;
+  case O_Mov:
+    Regs[PC->Operands[0]] = Regs[PC->Operands[1]];
+    return eval(PC + 1, Args);
 
-    case O_Add:
-      Regs[PC->Operands[0]] += Regs[PC->Operands[1]];
-      break;
+  case O_Add:
+    Regs[PC->Operands[0]] += Regs[PC->Operands[1]];
+    return eval(PC + 1, Args);
 
-    case O_Sub:
-      Regs[PC->Operands[0]] -= Regs[PC->Operands[1]];
-      break;
+  case O_Sub:
+    Regs[PC->Operands[0]] -= Regs[PC->Operands[1]];
+    return eval(PC + 1, Args);
 
-    case O_Jmp:
-      PC = Program + PC->Operands[0];
-      continue;
+  case O_Jmp:
+    return eval(PC + PC->Operands[0], Args);
 
-    case O_Jze:
-      if (Regs[PC->Operands[0]])
-        break;
-      PC = Program + PC->Operands[1];
-      continue;
+  case O_Jze:
+    if (Regs[PC->Operands[0]])
+      return eval(PC + PC->Operands[1], Args);
+    else
+      return eval(PC + 1, Args);
 
-    case O_Ret:
-      return Regs[PC->Operands[0]];
-    }
+  case O_Ret:
+    return Regs[PC->Operands[0]];
   }
 }
 

@@ -22,10 +22,10 @@ void BM_BytecodeMix(benchmark::State &S, const std::string &Name,
     benchmark::DoNotOptimize(F(Args));
 }
 
-static Instruction Fibonacci[] = {{O_Par, 0, 0},  {O_Int, 1, 0}, {O_Int, 2, 1},
-                                  {O_Jze, 0, 10}, {O_Mov, 3, 1}, {O_Add, 1, 2},
-                                  {O_Mov, 2, 3},  {O_Int, 3, 1}, {O_Sub, 0, 3},
-                                  {O_Jmp, 3},     {O_Ret, 1}};
+static Instruction Fibonacci[] = {{O_Par, 0, 0}, {O_Int, 1, 0}, {O_Int, 2, 1},
+                                  {O_Jze, 0, 7}, {O_Mov, 3, 1}, {O_Add, 1, 2},
+                                  {O_Mov, 2, 3}, {O_Int, 3, 1}, {O_Sub, 0, 3},
+                                  {O_Jmp, -6},   {O_Ret, 1}};
 static int Params[] = {8};
 
 BENCHMARK_CAPTURE(BM_Bytecode, Fibonacci, Fibonacci, Params);
