@@ -9,13 +9,13 @@ namespace {
 
 void BM_Arith(benchmark::State &S, Node *Expr, int *Args) {
   for (auto _: S)
-    benchmark::DoNotOptimize(eval(Expr, Args));
+    benchmark::DoNotOptimize(evalExpr(Expr, Args));
 }
 
 void BM_ArithMix(benchmark::State &S, const std::string &Name, Node *Expr,
                  int *Args) {
   Compiler C("Arith." + Name);
-  C.setFunction(mixEval(&C.getContext(), Expr));
+  C.setFunction(mixEvalExpr(&C.getContext(), Expr));
   auto *F = reinterpret_cast<int (*)(int *)>(C.compile());
 
   for (auto _ : S)

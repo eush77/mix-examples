@@ -34,8 +34,8 @@ struct BinaryNode {
   struct Node *Left, *Right;
 } __attribute__((staged));
 
-int eval(struct Node *, int *);
-void *mixEval(void *Ctx, struct Node *);
+int evalExpr(struct Node *, int *);
+void *mixEvalExpr(void *Ctx, struct Node *);
 
 #ifdef __cplusplus
 } // extern "C"
