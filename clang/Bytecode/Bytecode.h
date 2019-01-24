@@ -21,8 +21,8 @@ struct Instruction {
   int Operands[2];
 } __attribute__((staged));
 
-int eval(struct Instruction *, int *);
-void *mixEval(void *Ctx, struct Instruction *);
+int eval(unsigned ProgramSize, struct Instruction *Program, int *Args);
+void *mixEval(void *Ctx, unsigned ProgramSize, struct Instruction *Program);
 
 #ifdef __cplusplus
 } // extern "C"
