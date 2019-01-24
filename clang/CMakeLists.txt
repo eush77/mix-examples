@@ -9,4 +9,5 @@ target_include_directories(mix-examples PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(Arith)
 add_subdirectory(Bytecode)
+add_subdirectory(Format)
 add_subdirectory(Power)
