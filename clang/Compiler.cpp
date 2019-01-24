@@ -7,6 +7,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/DataLayout.h"
@@ -58,7 +59,11 @@ Compiler::Compiler(llvm::StringRef Name)
       ObjectLayer(ES, std::bind(&std::make_unique<llvm::SectionMemoryManager>)),
       CompileLayer(ES, ObjectLayer,
                    llvm::orc::SimpleCompiler(Target::getTargetMachine())),
-      Ctx(new llvm::LLVMContext) {}
+      Ctx(new llvm::LLVMContext) {
+  ES.getMainJITDylib().setGenerator(llvm::cantFail(
+      llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
+          Target::getDataLayout())));
+}
 
 namespace {
 
