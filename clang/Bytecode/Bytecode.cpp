@@ -23,6 +23,22 @@ void BM_BytecodeMix(benchmark::State &S, const std::string &Name,
     benchmark::DoNotOptimize(F(Args));
 }
 
+void BM_BytecodeOpt(benchmark::State &S, unsigned ProgramSize,
+                    Instruction *Program, int *Args) {
+  for (auto _: S)
+    benchmark::DoNotOptimize(evalOpt(ProgramSize, Program, Args));
+}
+
+void BM_BytecodeOptMix(benchmark::State &S, const std::string &Name,
+                       unsigned ProgramSize, Instruction *Program, int *Args) {
+  Compiler C("BytecodeOpt." + Name);
+  C.setFunction(mixEvalOpt(&C.getContext(), ProgramSize, Program));
+  auto *F = reinterpret_cast<int (*)(int *)>(C.compile());
+
+  for (auto _ : S)
+    benchmark::DoNotOptimize(F(Args));
+}
+
 static Instruction Fibonacci[] = {{O_Par, 0, 0}, {O_Int, 1, 0}, {O_Int, 2, 1},
                                   {O_Jze, 0, 7}, {O_Mov, 3, 1}, {O_Add, 1, 2},
                                   {O_Mov, 2, 3}, {O_Int, 3, 1}, {O_Sub, 0, 3},
@@ -32,6 +48,11 @@ static int Params[] = {8};
 BENCHMARK_CAPTURE(BM_Bytecode, Fibonacci,
                   sizeof(Fibonacci) / sizeof(*Fibonacci), Fibonacci, Params);
 BENCHMARK_CAPTURE(BM_BytecodeMix, Fibonacci, "Fibonacci",
+                  sizeof(Fibonacci) / sizeof(*Fibonacci), Fibonacci, Params);
+
+BENCHMARK_CAPTURE(BM_BytecodeOpt, Fibonacci,
+                  sizeof(Fibonacci) / sizeof(*Fibonacci), Fibonacci, Params);
+BENCHMARK_CAPTURE(BM_BytecodeOptMix, Fibonacci, "Fibonacci",
                   sizeof(Fibonacci) / sizeof(*Fibonacci), Fibonacci, Params);
 
 } // namespace

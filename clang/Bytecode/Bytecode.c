@@ -2,7 +2,8 @@
 
 static int Regs[5];
 
-__attribute__((noinline)) __stage(1) int id(__stage(1) int x) __stage(1) {
+__attribute__((noinline)) static __stage(1) int id(__stage(1) int x) __stage(
+    1) {
   return x;
 }
 

@@ -23,6 +23,8 @@ struct Instruction {
 
 int eval(unsigned ProgramSize, struct Instruction *Program, int *Args);
 void *mixEval(void *Ctx, unsigned ProgramSize, struct Instruction *Program);
+int evalOpt(unsigned ProgramSize, struct Instruction *Program, int *Args);
+void *mixEvalOpt(void *Ctx, unsigned ProgramSize, struct Instruction *Program);
 
 #ifdef __cplusplus
 } // extern "C"
