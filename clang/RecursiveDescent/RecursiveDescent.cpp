@@ -7,24 +7,34 @@
 
 namespace {
 
-Terminal TermA = {'a'};
-Symbol SymA = {T_Terminal, &TermA};
-Terminal TermB = {'b'};
-Symbol SymB = {T_Terminal, &TermB};
-Alternative A_B[] = {{1, &SymA}, {1, &SymB}};
-Nonterminal AB = {2, A_B};
-Symbol SymAB = {T_Nonterminal, &AB};
+Terminal A = {'a'};
+Terminal B = {'b'};
+Terminal Plus = {'+'};
 
-const char Text[] = "abab";
+extern Nonterminal AB, S;
+
+Symbol Symbols[] = {{T_Terminal, &A},
+                    {T_Terminal, &B},
+                    {T_Nonterminal, &AB},
+                    {T_Terminal, &Plus},
+                    {T_Nonterminal, &S}};
+Symbol *Start = Symbols + 4;
+
+Alternative Alternatives[] = {
+    {1, Symbols}, {1, Symbols + 1}, {3, Symbols + 2}, {1, Symbols + 2}};
+Nonterminal AB = {2, Alternatives};
+Nonterminal S = {2, Alternatives + 2};
+
+const char Text[] = "a+b+a+a+b";
 
 void BM_RecursiveDescent(benchmark::State &S) {
   for (auto _: S)
-    benchmark::DoNotOptimize(parse(&SymAB, Text));
+    benchmark::DoNotOptimize(parse(Start, Text));
 }
 
 void BM_RecursiveDescentMix(benchmark::State &S) {
   Compiler C("RecursiveDescent");
-  C.setFunction(mixParse(&C.getContext(), &SymAB));
+  C.setFunction(mixParse(&C.getContext(), Start));
   auto *F = reinterpret_cast<const char *(*)(const char *)>(C.compile());
 
   for (auto _ : S)
