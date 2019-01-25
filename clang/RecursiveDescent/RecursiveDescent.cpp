@@ -25,7 +25,7 @@ void BM_RecursiveDescent(benchmark::State &S) {
 void BM_RecursiveDescentMix(benchmark::State &S) {
   Compiler C("RecursiveDescent");
   C.setFunction(mixParse(&C.getContext(), &SymAB));
-  auto *F = reinterpret_cast<bool (*)(const char *)>(C.compile());
+  auto *F = reinterpret_cast<const char *(*)(const char *)>(C.compile());
 
   for (auto _ : S)
     benchmark::DoNotOptimize(F(Text));

@@ -5,8 +5,6 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
-
 enum Tag { T_Terminal, T_Nonterminal };
 
 struct Symbol {
@@ -28,7 +26,7 @@ struct Nonterminal {
   struct Alternative *Alt;
 } __attribute__((staged));
 
-bool parse(struct Symbol *, const char *);
+const char *parse(struct Symbol *, const char *);
 void *mixParse(void *, struct Symbol *);
 
 #ifdef __cplusplus
