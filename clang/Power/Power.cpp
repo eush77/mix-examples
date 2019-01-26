@@ -42,9 +42,9 @@ void BM_PowerLogMix(benchmark::State &S) {
     benchmark::DoNotOptimize(F(2));
 }
 
-BENCHMARK(BM_PowerLin)->RangeMultiplier(2)->Range(5, 40)->Complexity();
-BENCHMARK(BM_PowerLinMix)->RangeMultiplier(2)->Range(5, 40)->Complexity();
-BENCHMARK(BM_PowerLog)->RangeMultiplier(2)->Range(5, 40)->Complexity();
-BENCHMARK(BM_PowerLogMix)->RangeMultiplier(2)->Range(5, 40)->Complexity();
+BENCHMARK(BM_PowerLin)->Arg(10);
+BENCHMARK(BM_PowerLinMix)->Arg(10);
+BENCHMARK(BM_PowerLog)->Arg(10);
+BENCHMARK(BM_PowerLogMix)->Arg(10);
 
 } // namespace
