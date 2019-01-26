@@ -27,9 +27,9 @@ Nonterminal S = {2, Alternatives + 2};
 
 const char Text[] = "a+b+a+a+b";
 
-void BM_RecursiveDescent(benchmark::State &S) {
+void BM_RecursiveDescentInt(benchmark::State &S) {
   for (auto _: S)
-    benchmark::DoNotOptimize(parse(Start, Text));
+    benchmark::DoNotOptimize(parseInt(Start, Text));
 }
 
 void BM_RecursiveDescentMix(benchmark::State &S) {
@@ -41,7 +41,7 @@ void BM_RecursiveDescentMix(benchmark::State &S) {
     benchmark::DoNotOptimize(F(Text));
 }
 
-BENCHMARK(BM_RecursiveDescent);
+BENCHMARK(BM_RecursiveDescentInt);
 BENCHMARK(BM_RecursiveDescentMix);
 
 } // namespace

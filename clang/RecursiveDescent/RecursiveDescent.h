@@ -26,7 +26,7 @@ struct Nonterminal {
   struct Alternative *Alt;
 } __attribute__((staged));
 
-const char *parse(struct Symbol *, const char *);
+const char *parseInt(struct Symbol *, const char *);
 void *mixParse(void *, struct Symbol *);
 
 #ifdef __cplusplus
