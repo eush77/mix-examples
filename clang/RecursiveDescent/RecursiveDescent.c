@@ -9,11 +9,30 @@ static __stage(1) const
 }
 
 static __stage(1) const
-    char *parseNonterminal(struct Nonterminal *N,
-                           __stage(1) const char *Str) __stage(1);
+    char *parseAlternative(struct Alternative *A,
+                           __stage(1) const char *Str) __stage(1) {
+  for (struct Symbol *S = A->Sym; S != A->Sym + A->NSym; ++S) {
+    if (!(Str = S->Parse(Str)))
+      return NULL;
+  }
+  return Str;
+}
 
 static __stage(1) const
-    char *parse(struct Symbol *S, __stage(1) const char *Str) __stage(1) {
+    char *parseNonterminal(struct Nonterminal *N,
+                           __stage(1) const char *Str) __stage(1) {
+  for (struct Alternative *A = N->Alt; A != N->Alt + N->NAlt; ++A) {
+    const char *End = A->Parse(Str);
+
+    if (End)
+      return End;
+  }
+
+  return NULL;
+}
+
+static __stage(1) const
+    char *parseSymbol(struct Symbol *S, __stage(1) const char *Str) __stage(1) {
   switch (S->T) {
   case T_Terminal:
     return parseTerminal((struct Terminal *)S->Node, Str);
@@ -23,41 +42,22 @@ static __stage(1) const
   }
 }
 
-__attribute__((mix(parse))) void *mixParse(void *, struct Symbol *);
-
 static __stage(1) const
-    char *parseAlternative(struct Alternative *A,
-                           __stage(1) const char *Str) __stage(1) {
-  __builtin_assume(A->NSym != 0);
+    char *parse(unsigned NumSymbols, struct Symbol Symbols[],
+                unsigned NumAlternatives, struct Alternative Alternatives[],
+                struct Symbol *Start, __stage(1) const char *Str) __stage(1) {
+  for (struct Symbol *S = Symbols; S != Symbols + NumSymbols; ++S)
+    S->Parse = __builtin_mix_call(parseSymbol, S);
 
-  const char *(*Sym[A->NSym])(const char *);
+  for (struct Alternative *A = Alternatives;
+       A != Alternatives + NumAlternatives; ++A)
+    A->Parse = __builtin_mix_call(parseAlternative, A);
 
-  for (unsigned SNum = 0; SNum < A->NSym; ++SNum)
-    Sym[SNum] = __builtin_mix_call(parse, A->Sym + SNum);
-
-  for (unsigned SNum = 0; SNum < A->NSym; ++SNum) {
-    if (!(Str = Sym[SNum](Str)))
-      return NULL;
-  }
-  return Str;
+  return Start->Parse(Str);
 }
 
-static __stage(1) const
-    char *parseNonterminal(struct Nonterminal *N,
-                           __stage(1) const char *Str) __stage(1) {
-  __builtin_assume(N->NAlt != 0);
-
-  const char *(*Alt[N->NAlt])(const char *);
-
-  for (unsigned ANum = 0; ANum < N->NAlt; ++ANum)
-    Alt[ANum] = __builtin_mix_call(parseAlternative, N->Alt + ANum);
-
-  for (unsigned ANum = 0; ANum < N->NAlt; ++ANum) {
-    const char *End = Alt[ANum](Str);
-
-    if (End)
-      return End;
-  }
-
-  return NULL;
-}
+__attribute__((mix(parse))) void *mixParse(void *Ctx, unsigned NumSymbols,
+                                           struct Symbol Symbols[],
+                                           unsigned NumAlternatives,
+                                           struct Alternative Alternatives[],
+                                           struct Symbol *Start);

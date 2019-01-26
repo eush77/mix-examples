@@ -3,6 +3,7 @@
 
 #ifdef __cplusplus
 extern "C" {
+#define __stage(_)
 #endif
 
 enum Tag { T_Terminal, T_Nonterminal };
@@ -10,6 +11,7 @@ enum Tag { T_Terminal, T_Nonterminal };
 struct Symbol {
   enum Tag T;
   void *Node;
+  const char *(*Parse)(const char *) __stage(2);
 } __attribute__((staged));
 
 struct Terminal {
@@ -19,6 +21,7 @@ struct Terminal {
 struct Alternative {
   unsigned NSym;
   struct Symbol *Sym;
+  const char *(*Parse)(const char *) __stage(2);
 } __attribute__((staged));
 
 struct Nonterminal {
@@ -27,7 +30,9 @@ struct Nonterminal {
 } __attribute__((staged));
 
 const char *parseInt(struct Symbol *, const char *);
-void *mixParse(void *, struct Symbol *);
+void *mixParse(void *Ctx, unsigned NumSymbols, struct Symbol Symbols[],
+               unsigned NumAlternatives, struct Alternative Alternatives[],
+               struct Symbol *Start);
 
 #ifdef __cplusplus
 } // extern "C"

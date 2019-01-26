@@ -34,7 +34,9 @@ void BM_RecursiveDescentInt(benchmark::State &S) {
 
 void BM_RecursiveDescentMix(benchmark::State &S) {
   Compiler C("RecursiveDescent");
-  C.setFunction(mixParse(&C.getContext(), Start));
+  C.setFunction(mixParse(&C.getContext(), sizeof(Symbols) / sizeof(*Symbols),
+                         Symbols, sizeof(Alternatives) / sizeof(*Alternatives),
+                         Alternatives, Start));
   auto *F = reinterpret_cast<const char *(*)(const char *)>(C.compile());
 
   for (auto _ : S)
