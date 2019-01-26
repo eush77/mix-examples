@@ -5,6 +5,8 @@
 
 #include <string>
 
+using namespace std::string_literals;
+
 namespace {
 
 Terminal A = {'a'};
@@ -27,23 +29,31 @@ Nonterminal S = {2, Alternatives + 2};
 
 const char Text[] = "a+b+a+a+b";
 
-void BM_RecursiveDescentInt(benchmark::State &S) {
+void BM_RecursiveDescentInt(benchmark::State &S,
+                            const char *parse(Symbol *Start, const char *Str)) {
   for (auto _: S)
-    benchmark::DoNotOptimize(parseInt(Start, Text));
+    benchmark::DoNotOptimize(parse(Start, Text));
 }
 
-void BM_RecursiveDescentMix(benchmark::State &S) {
-  Compiler C("RecursiveDescent");
-  C.setFunction(mixParse(&C.getContext(), sizeof(Symbols) / sizeof(*Symbols),
-                         Symbols, sizeof(Alternatives) / sizeof(*Alternatives),
-                         Alternatives, Start));
+void BM_RecursiveDescentMix(benchmark::State &S, const char *Name,
+                            void *mix(void *Ctx, unsigned NumSymbols,
+                                      Symbol Symbols[],
+                                      unsigned NumAlternatives,
+                                      Alternative Alternatives[],
+                                      Symbol *Start)) {
+  Compiler C("RecursiveDescent."s + Name);
+  C.setFunction(mix(&C.getContext(), sizeof(Symbols) / sizeof(*Symbols),
+                    Symbols, sizeof(Alternatives) / sizeof(*Alternatives),
+                    Alternatives, Start));
   auto *F = reinterpret_cast<const char *(*)(const char *)>(C.compile());
 
   for (auto _ : S)
     benchmark::DoNotOptimize(F(Text));
 }
 
-BENCHMARK(BM_RecursiveDescentInt);
-BENCHMARK(BM_RecursiveDescentMix);
+BENCHMARK_CAPTURE(BM_RecursiveDescentInt, Base, parseInt);
+BENCHMARK_CAPTURE(BM_RecursiveDescentInt, Unroll, parseIntUnroll);
+BENCHMARK_CAPTURE(BM_RecursiveDescentMix, Base, "Base", mixParse);
+BENCHMARK_CAPTURE(BM_RecursiveDescentMix, Unroll, "Unroll", mixParseUnroll);
 
 } // namespace

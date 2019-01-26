@@ -32,9 +32,13 @@ struct Nonterminal {
 } __attribute__((staged));
 
 const char *parseInt(struct Symbol *, const char *);
+const char *parseIntUnroll(struct Symbol *, const char *);
 void *mixParse(void *Ctx, unsigned NumSymbols, struct Symbol Symbols[],
                unsigned NumAlternatives, struct Alternative Alternatives[],
                struct Symbol *Start);
+void *mixParseUnroll(void *Ctx, unsigned NumSymbols, struct Symbol Symbols[],
+                     unsigned NumAlternatives,
+                     struct Alternative Alternatives[], struct Symbol *Start);
 
 #ifdef __cplusplus
 } // extern "C"
