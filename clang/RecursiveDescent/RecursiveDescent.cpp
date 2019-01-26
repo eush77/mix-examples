@@ -52,8 +52,8 @@ void BM_RecursiveDescentMix(benchmark::State &S, const char *Name,
 }
 
 BENCHMARK_CAPTURE(BM_RecursiveDescentInt, Base, parseInt);
-BENCHMARK_CAPTURE(BM_RecursiveDescentInt, Unroll, parseIntUnroll);
 BENCHMARK_CAPTURE(BM_RecursiveDescentMix, Base, "Base", mixParse);
+BENCHMARK_CAPTURE(BM_RecursiveDescentInt, Unroll, parseIntUnroll);
 BENCHMARK_CAPTURE(BM_RecursiveDescentMix, Unroll, "Unroll", mixParseUnroll);
 
 } // namespace
