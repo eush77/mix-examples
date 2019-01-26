@@ -8,10 +8,12 @@ extern "C" {
 
 enum Tag { T_Terminal, T_Nonterminal };
 
+typedef const char *(*Thunk)(const char *);
+
 struct Symbol {
   enum Tag T;
   void *Node;
-  const char *(*Parse)(const char *) __stage(2);
+  Thunk Parse __stage(2);
 } __attribute__((staged));
 
 struct Terminal {
@@ -21,7 +23,7 @@ struct Terminal {
 struct Alternative {
   unsigned NSym;
   struct Symbol *Sym;
-  const char *(*Parse)(const char *) __stage(2);
+  Thunk Parse __stage(2);
 } __attribute__((staged));
 
 struct Nonterminal {
