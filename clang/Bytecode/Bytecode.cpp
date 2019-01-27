@@ -35,6 +35,8 @@ void BM_BytecodeMix(benchmark::State &S, const char *Name,
     benchmark::DoNotOptimize(F(Params));
 }
 
+BENCHMARK_CAPTURE(BM_Bytecode, Dyn, evalDyn);
+BENCHMARK_CAPTURE(BM_BytecodeMix, Dyn, "Dyn", mixEvalDyn);
 BENCHMARK_CAPTURE(BM_Bytecode, Base, eval);
 BENCHMARK_CAPTURE(BM_BytecodeMix, Base, "Base", mixEval);
 BENCHMARK_CAPTURE(BM_Bytecode, Opt, evalOpt);

@@ -21,6 +21,8 @@ struct Instruction {
   int Operands[2];
 } __attribute__((staged));
 
+int evalDyn(unsigned ProgramSize, struct Instruction *Program, int *Args);
+void *mixEvalDyn(void *Ctx, unsigned ProgramSize, struct Instruction *Program);
 int eval(unsigned ProgramSize, struct Instruction *Program, int *Args);
 void *mixEval(void *Ctx, unsigned ProgramSize, struct Instruction *Program);
 int evalOpt(unsigned ProgramSize, struct Instruction *Program, int *Args);
