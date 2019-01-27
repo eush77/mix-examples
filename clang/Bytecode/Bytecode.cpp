@@ -18,6 +18,9 @@ int Params[] = {8};
 void BM_Bytecode(benchmark::State &S,
                  int eval(unsigned ProgramSize, Instruction *Program,
                           int *Args)) {
+  S.SetLabel("result:" +
+             std::to_string(eval(sizeof(Fibonacci) / sizeof(*Fibonacci),
+                                 Fibonacci, Params)));
   for (auto _: S)
     benchmark::DoNotOptimize(
         eval(sizeof(Fibonacci) / sizeof(*Fibonacci), Fibonacci, Params));
@@ -30,6 +33,7 @@ void BM_BytecodeMix(benchmark::State &S, const char *Name,
   C.setFunction(
       mix(&C.getContext(), sizeof(Fibonacci) / sizeof(*Fibonacci), Fibonacci));
   auto *F = reinterpret_cast<int (*)(int *)>(C.compile());
+  S.SetLabel("result:" + std::to_string(F(Params)));
 
   for (auto _ : S)
     benchmark::DoNotOptimize(F(Params));

@@ -46,7 +46,7 @@ static __stage(1) int evalBasicBlock(struct Instruction *PC,
     return N + PC->Operands[0];
 
   case O_Jze:
-    return N + id(Regs[PC->Operands[0]] ? PC->Operands[1] : 1);
+    return N + id(Regs[PC->Operands[0]] ? 1 : PC->Operands[1]);
 
   case O_Ret:
     return N;

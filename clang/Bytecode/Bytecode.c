@@ -34,7 +34,7 @@ static __stage(1) int evalInstruction(struct Instruction *PC,
     return PC->Operands[0];
 
   case O_Jze:
-    return id(Regs[PC->Operands[0]] ? PC->Operands[1] : 1);
+    return id(Regs[PC->Operands[0]] ? 1: PC->Operands[1]);
 
   case O_Ret:
     return 0;
