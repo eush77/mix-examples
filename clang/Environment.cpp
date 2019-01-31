@@ -6,7 +6,7 @@
 #include <cstdlib>
 
 bool Dumping = false;
-unsigned OptLevel = 2;
+unsigned OptLevel = 1;
 unsigned SizeLevel = 0;
 
 namespace {
