@@ -23,6 +23,8 @@ class Compiler {
 public:
   explicit Compiler(llvm::StringRef Name);
 
+  ~Compiler() { ES.reportError(ES.endSession()); }
+
   llvm::LLVMContext &getContext() { return *Ctx; }
   void setFunction(void *);
   llvm::JITTargetAddress compile();
@@ -30,6 +32,7 @@ public:
 private:
   Dumper D;
   llvm::orc::ExecutionSession ES;
+  llvm::orc::JITDylib &JD;
   llvm::orc::RTDyldObjectLinkingLayer ObjectLayer;
   llvm::orc::IRCompileLayer CompileLayer;
   std::unique_ptr<llvm::LLVMContext> Ctx;

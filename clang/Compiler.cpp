@@ -8,6 +8,7 @@
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/DataLayout.h"
@@ -56,13 +57,16 @@ private:
 
 Compiler::Compiler(llvm::StringRef Name)
     : D(Name),
+      ES(std::make_unique<llvm::orc::UnsupportedExecutorProcessControl>()),
+      JD(cantFail(ES.createJITDylib("<main>"))),
       ObjectLayer(ES, std::bind(&std::make_unique<llvm::SectionMemoryManager>)),
       CompileLayer(ES, ObjectLayer,
-                   llvm::orc::SimpleCompiler(Target::getTargetMachine())),
+                   std::make_unique<llvm::orc::SimpleCompiler>(
+                       Target::getTargetMachine())),
       Ctx(new llvm::LLVMContext) {
-  ES.getMainJITDylib().setGenerator(llvm::cantFail(
+  JD.addGenerator(cantFail(
       llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-          Target::getDataLayout())));
+          Target::getDataLayout().getGlobalPrefix())));
 }
 
 namespace {
@@ -106,14 +110,13 @@ llvm::JITTargetAddress Compiler::compile() {
   llvm::orc::ThreadSafeModule TSM(std::unique_ptr<llvm::Module>(M),
                                   std::move(Ctx));
 
-  if (llvm::Error Err = CompileLayer.add(ES.getMainJITDylib(), std::move(TSM)))
+  if (llvm::Error Err = CompileLayer.add(JD, std::move(TSM)))
     llvm::report_fatal_error(std::move(Err));
 
-  llvm::Expected<llvm::JITEvaluatedSymbol> Symbol =
-      ES.getMainJITDylib().withSearchOrderDo(
-          [&](const llvm::orc::JITDylibSearchList &SearchList) {
-            return ES.lookup(SearchList, ES.intern(F->getName()));
-          });
+  llvm::Expected<llvm::JITEvaluatedSymbol> Symbol = JD.withLinkOrderDo(
+      [&](const llvm::orc::JITDylibSearchOrder &SearchOrder) {
+        return ES.lookup(SearchOrder, ES.intern(F->getName()));
+      });
 
   if (!Symbol)
     llvm::report_fatal_error(Symbol.takeError());
